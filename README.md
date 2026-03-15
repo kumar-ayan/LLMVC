@@ -1,73 +1,93 @@
-# PromptVC — Version Control for LLM Prompts
+# PromptVault CLI (`pv`)
 
-A full-stack application for managing, versioning, diffing, evaluating, and rolling back LLM prompts. Includes LLM-as-judge scoring for automated prompt quality assessment.
+A fully local, terminal-first version control and AI-evaluation system for LLM prompts. 
 
-![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+![Node.js](https://img.shields.io/badge/Node.js-18+-black?logo=node.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
-![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite)
+![SQLite](https://img.shields.io/badge/SQLite-Native-003B57?logo=sqlite)
 
-## Features
+## Demo
 
-- **Version Control** — Save prompt versions with commit messages, browse history
-- **Diff Viewer** — Color-coded line-by-line diff between any two versions
-- **Rollback** — Revert to any previous version (creates new version preserving history)
-- **Test Cases** — Define input/expected-output pairs for systematic testing
-- **Eval Runner** — Execute prompts against test cases using any OpenAI-compatible API
-- **LLM-as-Judge** — Automated scoring (0–10) with reasoning using a second LLM call
-- **Dark Mode UI** — Glassmorphism design with smooth animations
+![PromptVault Demo](demo.gif)
+*(Placeholder: Record a terminal session with Asciinema and convert to GIF here)*
 
-## Quick Start
+## Architecture (Local-First Design)
+
+PromptVault is designed for **100% privacy and local control**. There is no cloud backend, no account to create, and no telemetry.
+- **Storage**: All prompts, versions, and configurations are stored as a local SQLite database at `~/.promptvault/vault.db` using Node's ultra-fast native `node:sqlite` module. 
+- **Configuration**: API keys and preferences are kept locally in `~/.promptvault/config.json`.
+- **SSRF Protection**: Importing prompts via URL prevents resolution to local or private IPs.
+- **AI Processing**: LLM API calls are made directly from your machine to the provider.
+
+## Installation
+
+You can install PromptVault globally on your machine:
 
 ```bash
-# Install dependencies
+# Clone the repository
+git clone https://github.com/your-repo/promptvault-cli.git
+cd promptvault-cli
+
+# Install dependencies and compile TypeScript
 npm install
+npm run build
 
-# Start dev server
-npm run dev
+# Install the CLI globally
+npm install -g .
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+You can now use the `pv` command anywhere in your terminal!
 
-## LLM Configuration
+## Configuration
 
-To use evals and LLM-as-judge scoring, configure an API key:
-
-1. Navigate to **Settings** in the app
-2. Enter your OpenAI (or compatible) API key
-3. Optionally customize Base URL and Model
-
-Or create a `.env.local` file:
-
-```env
-OPENAI_API_KEY=sk-your-key
-OPENAI_BASE_URL=https://api.openai.com/v1
-LLM_MODEL=gpt-4o-mini
+Before using AI features (like `analyze`, `eval`, or `fix`), run:
+```bash
+pv config
 ```
+This interactive prompt will ask for your OpenAI (or compatible) API Key and preferred model.
 
-## Tech Stack
+## Command Reference
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Next.js 16 + TypeScript (App Router) |
-| Backend | Next.js API Routes |
-| Database | SQLite via better-sqlite3 |
-| Styling | Vanilla CSS (dark mode, glassmorphism) |
-| Diffing | `diff` npm package |
-| LLM API | OpenAI-compatible REST API |
+| Command | Description |
+|---------|-------------|
+| `pv add` / `pv add "text"` | Save a new prompt (opens `$EDITOR` if no text) |
+| `pv import --text` / `--url` | Import and auto-extract prompts from raw chat logs or webpages |
+| `pv list [--tag string]` | List all tracked prompts in a table |
+| `pv search "keyword"` | Full-text search across all prompts and tags |
+| `pv view <id>` | View the latest prompt version and its AI analysis |
+| `pv edit <id>` | Open the latest version in `$EDITOR` and save changes as a new version |
+| `pv diff <id> --v1 X --v2 Y`| Show a word-level colorized diff between two versions |
+| `pv rollback <id> --to X` | Roll back to a previous version (creates a new version) |
+| `pv history <id>` | Show timeline of all versions and their scores |
+| `pv delete <id>` | Delete a prompt and its history entirely |
+| `pv export [--json/--md]` | Export the entire prompt vault for backups |
+| `pv analyze <id>` | Run an AI analysis on the prompt and display a scorecard |
+| `pv fix <id>` | Let AI suggest and optionally apply an improved version |
+| `pv eval <id> [--add/--run]`| Add test cases or evaluate the prompt using an LLM-as-judge |
 
-## API Reference
+## Analysis Example
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/prompts` | GET, POST | List / create prompts |
-| `/api/prompts/:id` | GET, DELETE | Get / delete prompt |
-| `/api/prompts/:id/versions` | GET, POST | List / create versions |
-| `/api/prompts/:id/diff?v1=X&v2=Y` | GET | Diff two versions |
-| `/api/prompts/:id/rollback` | POST | Rollback to version |
-| `/api/prompts/:id/test-cases` | GET, POST | Manage test cases |
-| `/api/prompts/:id/evals` | GET, POST | Run / list evals |
-| `/api/prompts/:id/evals/:runId` | GET | Get eval results |
-| `/api/settings` | GET, PUT | LLM configuration |
+Running `pv analyze` produces a detailed grading scorecard:
+```
+┌─────────────────────────────────────────┐
+│  PromptVault Analysis — v3              │
+├─────────────────────────────────────────┤
+│  Overall Score        82 / 100  ████████░░   
+│                                         │
+│  Clarity              90 / 100  █████████░   
+│  Specificity          75 / 100  ███████░░░   
+│  Context              80 / 100  ████████░░   
+│  Instruction Quality  85 / 100  ████████░░   
+├─────────────────────────────────────────┤
+│  Issues found:                          │
+│  ⚠ Missing output format instruction    │
+│  ⚠ No example provided                  │
+├─────────────────────────────────────────┤
+│  Summary: Strong clarity but lacks      │
+│  output constraints. Add a format       │
+│  example to improve specificity.        │
+└─────────────────────────────────────────┘
+```
 
 ## License
 
