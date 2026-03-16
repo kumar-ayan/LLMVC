@@ -6,11 +6,6 @@ A fully local, terminal-first version control and AI-evaluation system for LLM p
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
 ![SQLite](https://img.shields.io/badge/SQLite-Native-003B57?logo=sqlite)
 
-## Demo
-
-![PromptVault Demo](demo.gif)
-*(Placeholder: Record a terminal session with Asciinema and convert to GIF here)*
-
 ## Architecture (Local-First Design)
 
 PromptVault is designed for **100% privacy and local control**. There is no cloud backend, no account to create, and no telemetry.
