@@ -14,6 +14,12 @@ PromptVault is designed for **100% privacy and local control**. There is no clou
 - **SSRF Protection**: Importing prompts via URL prevents resolution to local or private IPs.
 - **AI Processing**: LLM API calls are made directly from your machine to the provider.
 
+## Prerequisites
+
+Before installing PromptVault, ensure you have the following installed on your system:
+- **[Node.js](https://nodejs.org/)** (v18 or higher)
+- **[Ollama](https://ollama.com/)** (Running locally to handle AI evaluations and generation)
+
 ## Installation
 
 You can install PromptVault globally on your machine:
