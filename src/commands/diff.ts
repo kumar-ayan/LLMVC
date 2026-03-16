@@ -1,10 +1,11 @@
+import { getDb } from '../db/schema.js';
 import chalk from 'chalk';
 import { getVersionByNumber } from '../db/queries.js';
 import { printWordDiff } from '../ui/diffView.js';
 
 export async function diffCommand(id: string, options: { v1: string, v2: string }) {
-  const db = require('../db/schema.js').getDb();
-  const row = db.prepare('SELECT id, title FROM prompts WHERE id LIKE ?').get(`${id}%`) as { id: string, title: string } | undefined;
+
+  const row = getDb().prepare('SELECT id, title FROM prompts WHERE id LIKE ?').get(`${id}%`) as { id: string, title: string } | undefined;
   
   if (!row) {
     console.log(chalk.red(`⚠ Prompt with ID starting with "${id}" not found.`));

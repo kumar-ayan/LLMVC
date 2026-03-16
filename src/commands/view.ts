@@ -1,3 +1,4 @@
+import { getDb } from '../db/schema.js';
 import chalk from 'chalk';
 import { getPrompt, getLatestVersion, getLatestAnalysis } from '../db/queries.js';
 import { displayScoreCard } from '../ui/scoreCard.js';
@@ -12,8 +13,8 @@ marked.setOptions({
 
 export async function viewCommand(id: string) {
   // Find full ID based on prefix if short ID provided
-  const db = require('../db/schema.js').getDb();
-  const row = db.prepare('SELECT id FROM prompts WHERE id LIKE ?').get(`${id}%`) as { id: string } | undefined;
+
+  const row = getDb().prepare('SELECT id FROM prompts WHERE id LIKE ?').get(`${id}%`) as { id: string } | undefined;
   
   if (!row) {
     console.log(chalk.red(`⚠ Prompt with ID starting with "${id}" not found.`));

@@ -1,3 +1,4 @@
+import { getDb } from '../db/schema.js';
 import chalk from 'chalk';
 import ora from 'ora';
 import { getLatestVersion, saveAnalysis } from '../db/queries.js';
@@ -5,8 +6,8 @@ import { analyzePrompt } from '../ai/analyzer.js';
 import { displayScoreCard } from '../ui/scoreCard.js';
 
 export async function analyzeCommand(id: string) {
-  const db = require('../db/schema.js').getDb();
-  const row = db.prepare('SELECT id, title FROM prompts WHERE id LIKE ?').get(`${id}%`) as { id: string, title: string } | undefined;
+
+  const row = getDb().prepare('SELECT id, title FROM prompts WHERE id LIKE ?').get(`${id}%`) as { id: string, title: string } | undefined;
   
   if (!row) {
     console.log(chalk.red(`⚠ Prompt with ID starting with "${id}" not found.`));

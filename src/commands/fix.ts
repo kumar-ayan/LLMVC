@@ -1,3 +1,4 @@
+import { getDb } from '../db/schema.js';
 import chalk from 'chalk';
 import ora from 'ora';
 import inquirer from 'inquirer';
@@ -6,8 +7,8 @@ import { fixPrompt } from '../ai/fixer.js';
 import { printWordDiff, printFixComparison } from '../ui/diffView.js';
 
 export async function fixCommand(id: string) {
-  const db = require('../db/schema.js').getDb();
-  const row = db.prepare('SELECT id, title FROM prompts WHERE id LIKE ?').get(`${id}%`) as { id: string, title: string } | undefined;
+
+  const row = getDb().prepare('SELECT id, title FROM prompts WHERE id LIKE ?').get(`${id}%`) as { id: string, title: string } | undefined;
   
   if (!row) {
     console.log(chalk.red(`⚠ Prompt with ID starting with "${id}" not found.`));

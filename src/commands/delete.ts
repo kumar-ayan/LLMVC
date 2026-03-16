@@ -1,10 +1,11 @@
+import { getDb } from '../db/schema.js';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { deletePrompt } from '../db/queries.js';
 
 export async function deleteCommand(id: string) {
-  const db = require('../db/schema.js').getDb();
-  const row = db.prepare('SELECT id, title FROM prompts WHERE id LIKE ?').get(`${id}%`) as { id: string, title: string } | undefined;
+
+  const row = getDb().prepare('SELECT id, title FROM prompts WHERE id LIKE ?').get(`${id}%`) as { id: string, title: string } | undefined;
   
   if (!row) {
     console.log(chalk.red(`⚠ Prompt with ID starting with "${id}" not found.`));

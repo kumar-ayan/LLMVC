@@ -1,3 +1,4 @@
+import { getDb } from '../db/schema.js';
 import chalk from 'chalk';
 import { getPrompt, getVersions, getLatestAnalysis } from '../db/queries.js';
 import Table from 'cli-table3';
@@ -5,8 +6,8 @@ import { formatTimeAgo } from '../utils/time.js';
 import { getScoreColor } from '../ui/scoreCard.js';
 
 export async function historyCommand(id: string) {
-  const db = require('../db/schema.js').getDb();
-  const row = db.prepare('SELECT id FROM prompts WHERE id LIKE ?').get(`${id}%`) as { id: string } | undefined;
+
+  const row = getDb().prepare('SELECT id FROM prompts WHERE id LIKE ?').get(`${id}%`) as { id: string } | undefined;
   
   if (!row) {
     console.log(chalk.red(`⚠ Prompt with ID "${id}" not found.`));

@@ -16,9 +16,29 @@ PromptVault is designed for **100% privacy and local control**. There is no clou
 
 ## Prerequisites
 
-Before installing PromptVault, ensure you have the following installed on your system:
-- **[Node.js](https://nodejs.org/)** (v18 or higher)
-- **[Ollama](https://ollama.com/)** (Running locally to handle AI evaluations and generation)
+Before using PromptVault, ensure you have the following requirements installed on your system:
+
+- **[Node.js](https://nodejs.org/)** (v22.5 or higher recommended for the native `node:sqlite` module)
+- **SQLite3** (Ensure standard sqlite dependencies are available if your OS requires them)
+- *(Optional)* **[Ollama](https://ollama.com/)** (Required only if you want to run AI evaluations and generate prompt fixes locally)
+
+### Quick Install Prerequisites
+
+**Windows (via Winget)**
+```powershell
+winget install OpenJS.NodeJS sqlite.sqlite Ollama.Ollama
+```
+
+**macOS (via Homebrew)**
+```bash
+brew install node sqlite ollama
+```
+
+**Linux (Ubuntu/Debian)**
+```bash
+sudo apt update && sudo apt install nodejs npm sqlite3
+curl -fsSL https://ollama.com/install.sh | sh
+```
 
 ## Installation
 
