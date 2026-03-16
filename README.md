@@ -84,6 +84,25 @@ Running `pv analyze` produces a detailed grading scorecard:
 └─────────────────────────────────────────┘
 ```
 
+## How to contribute
+
+1. Fork the repo
+2. Pick any open issue — comment "I'll take this" so nobody duplicates work
+3. Create a branch: git checkout -b feature/pv-run
+4. Follow existing code style (TypeScript, async/await, same file structure)
+5. Test your command manually before submitting PR
+6. Open a PR with a short description of what you built
+
+## Setup
+npm install
+npm run build
+npm install -g .
+
+## Questions?
+Open a discussion or comment on the issue directly.
+
+
+
 ## License
 
 MIT
