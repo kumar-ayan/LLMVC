@@ -1,39 +1,121 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
+import ora from 'ora';
+import os from 'os';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { getConfig, saveConfig } from '../utils/config.js';
+
+const execAsync = promisify(exec);
+
+async function detectVRAM(): Promise<number> {
+  try {
+    if (process.platform === 'win32') {
+      const { stdout } = await execAsync('wmic path win32_VideoController get AdapterRAM');
+      const lines = stdout.split('\n').filter(line => line.trim().length > 0);
+      let maxVram = 0;
+      // skip the header "AdapterRAM"
+      for (let i = 1; i < lines.length; i++) {
+        const val = parseInt(lines[i].trim(), 10);
+        if (!isNaN(val) && val > maxVram) maxVram = val;
+      }
+      if (maxVram > 0) return maxVram;
+    }
+  } catch (err) {
+    // Ignore wmic errors
+  }
+  
+  // Fallback to system RAM
+  return os.totalmem();
+}
+
+function recommendModels(vramBytes: number) {
+  const gb = vramBytes / (1024 * 1024 * 1024);
+  
+  const models = [
+    { name: 'llama3:8b (Fast, Great reasoning)', value: 'llama3:8b', reqGb: 6 },
+    { name: 'gemma2:9b (Excellent accuracy)', value: 'gemma2:9b', reqGb: 8 },
+    { name: 'qwen2.5:7b (Incredible general knowledge)', value: 'qwen2.5:7b', reqGb: 6 },
+    { name: 'qwen2.5:0.5b (Ultra fast, lower quality)', value: 'qwen2.5:0.5b', reqGb: 1 },
+    { name: 'llama3.1:70b (Highest quality, requires heavy hardware)', value: 'llama3.1:70b', reqGb: 32 }
+  ];
+
+  // Map to select choices, highlighting recommended ones
+  return models.map(m => {
+    const recommended = gb >= m.reqGb ? chalk.green('✓ Recommended') : chalk.red('⚠ May be too large for your system');
+    return {
+      name: `${m.name.padEnd(60)} ${recommended}`,
+      value: m.value
+    };
+  });
+}
 
 export async function configCommand(options: { show?: boolean }) {
   const current = getConfig();
 
   if (options.show) {
-    console.log(chalk.bold('\nPromptVault Configuration:'));
-    
-    const maskedKey = current.apiKey 
-      ? `${current.apiKey.substring(0, 4)}...${current.apiKey.substring(current.apiKey.length - 4)}` 
-      : '(not set)';
-      
-    console.log(`  API Key:      ${chalk.cyan(maskedKey)}`);
-    console.log(`  Model:        ${chalk.cyan(current.model)}`);
+    console.log(chalk.bold('\nPromptVault Local Configuration:'));
+    console.log(`  Ollama Model: ${chalk.cyan(current.ollamaModel || '(not set)')}`);
+    console.log(`  Ollama Host:  ${chalk.cyan(current.ollamaUrl)}`);
     console.log(`  Default Tags: ${chalk.cyan(current.defaultTags.join(', ') || '(none)')}`);
     console.log(`  Auto-analyze: ${chalk.cyan(current.autoAnalyze ? 'Yes' : 'No')}`);
     console.log('');
     return;
   }
 
-  console.log(chalk.bold('\nConfigure PromptVault:'));
+  console.log(chalk.bold('\nConfigure PromptVault Local Models:'));
+  const spinner = ora('Detecting system RAM/VRAM to recommend models...').start();
+  
+  const vram = await detectVRAM();
+  const gb = Math.round(vram / (1024 * 1024 * 1024));
+  spinner.succeed(`Detected ~${gb}GB Memory available for models`);
+
+  const uiChoices = recommendModels(vram);
+  uiChoices.push({ name: 'Enter custom Ollama tag...', value: 'custom' });
+  uiChoices.push({ name: 'Skip model selection (I already have one set)', value: 'skip' });
 
   const answers = await inquirer.prompt([
     {
-      type: 'password',
-      name: 'apiKey',
-      message: 'OpenAI (or compatible) API Key (leave blank to keep current):',
-      mask: '*'
-    },
+      type: 'list',
+      name: 'modelSelection',
+      message: 'Select a local Ollama model to use for PromptVault:',
+      choices: uiChoices
+    }
+  ]);
+
+  let finalModel = current.ollamaModel;
+
+  if (answers.modelSelection !== 'skip') {
+    if (answers.modelSelection === 'custom') {
+      const customModelRes = await inquirer.prompt([{
+        type: 'input',
+        name: 'model',
+        message: 'Enter Ollama model tag (e.g. mistral:latest):'
+      }]);
+      finalModel = customModelRes.model.trim();
+    } else {
+      finalModel = answers.modelSelection;
+    }
+
+    if (finalModel) {
+      const pullSpinner = ora(`Pulling ${finalModel} via Ollama (this may take a while)...`).start();
+      try {
+        await execAsync(`ollama pull ${finalModel}`);
+        pullSpinner.succeed(`Successfully downloaded ${finalModel}`);
+      } catch (err: any) {
+        pullSpinner.fail(`Failed to pull model: ${finalModel}`);
+        console.log(chalk.red(`⚠ Is Ollama installed and running? Run 'ollama serve' first.`));
+        console.log(chalk.dim(err.message));
+      }
+    }
+  }
+
+  const prefs = await inquirer.prompt([
     {
       type: 'input',
-      name: 'model',
-      message: 'Default LLM Model:',
-      default: current.model
+      name: 'ollamaUrl',
+      message: 'Ollama Host URL:',
+      default: current.ollamaUrl
     },
     {
       type: 'input',
@@ -49,16 +131,13 @@ export async function configCommand(options: { show?: boolean }) {
     }
   ]);
 
-  const newConfig: any = {
-    model: answers.model.trim() || current.model,
-    defaultTags: answers.defaultTags.split(',').map((t: string) => t.trim()).filter(Boolean),
-    autoAnalyze: answers.autoAnalyze
+  const newConfig = {
+    ollamaModel: finalModel,
+    ollamaUrl: prefs.ollamaUrl.trim() || current.ollamaUrl,
+    defaultTags: prefs.defaultTags.split(',').map((t: string) => t.trim()).filter(Boolean),
+    autoAnalyze: prefs.autoAnalyze
   };
 
-  if (answers.apiKey.trim()) {
-    newConfig.apiKey = answers.apiKey.trim();
-  }
-
   saveConfig(newConfig);
-  console.log(`\n${chalk.green('✓')} Configuration saved!\n`);
+  console.log(`\n${chalk.green('✓')} Local Configuration saved!\n`);
 }

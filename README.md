@@ -20,8 +20,8 @@ You can install PromptVault globally on your machine:
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-repo/promptvault-cli.git
-cd promptvault-cli
+git clone https://github.com/kumar-ayan/LLMVC.git
+cd LLMVC
 
 # Install dependencies and compile TypeScript
 npm install

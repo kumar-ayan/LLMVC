@@ -17,7 +17,7 @@ import { exportCommand } from './commands/export.js';
 import { configCommand } from './commands/config.js';
 import { searchCommand } from './commands/search.js';
 import { importCommand } from './commands/importCmd.js';
-import { getApiKey } from './utils/config.js';
+import { getOllamaModel } from './utils/config.js';
 
 const program = new Command();
 
@@ -26,12 +26,12 @@ program
   .description(chalk.bold('PromptVault') + ' - Local-first version control for LLM prompts.')
   .version('1.0.0');
 
-// Inject API key check for AI commands
-function requireApi(action: (...args: any[]) => void) {
+// Inject Ollama check for AI commands
+function requireOllama(action: (...args: any[]) => void) {
   return async (...args: any[]) => {
-    if (!getApiKey()) {
-      console.log(chalk.yellow('\n⚠ This feature requires an OpenAI API key.'));
-      console.log(`Run ${chalk.cyan('pv config')} to set your key.\n`);
+    if (!getOllamaModel()) {
+      console.log(chalk.yellow('\n⚠ This feature requires a local Ollama model to be selected.'));
+      console.log(`Run ${chalk.cyan('pv config')} to setup and download a local LLM.\n`);
       process.exit(1);
     }
     await action(...args);
@@ -48,7 +48,7 @@ program
   .description('Import prompts from text or a webpage URL')
   .option('--text', 'Open editor to paste multi-line text mapping to prompts')
   .option('--url <url>', 'Fetch a webpage and extract prompts')
-  .action(requireApi(importCommand));
+  .action(requireOllama(importCommand));
 
 program
   .command('list')
@@ -82,19 +82,19 @@ program
 program
   .command('analyze <id>')
   .description('Run AI analysis and get a 0-100 scorecard')
-  .action(requireApi(analyzeCommand));
+  .action(requireOllama(analyzeCommand));
 
 program
   .command('fix <id>')
   .description('Generate an improved version of the prompt using AI')
-  .action(requireApi(fixCommand));
+  .action(requireOllama(fixCommand));
 
 program
   .command('eval <id>')
   .description('Manage & run test suites evaluating output accuracy')
   .option('--add', 'Add a new test case')
   .option('--run', 'Run all test cases using LLM-as-judge')
-  .action(requireApi(evalCommand));
+  .action(requireOllama(evalCommand));
 
 program
   .command('history <id>')

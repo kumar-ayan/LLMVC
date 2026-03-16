@@ -3,8 +3,8 @@ import path from 'path';
 import os from 'os';
 
 export interface Config {
-  apiKey: string;
-  model: string;
+  ollamaModel: string;
+  ollamaUrl: string;
   defaultTags: string[];
   autoAnalyze: boolean;
 }
@@ -13,8 +13,8 @@ const VAULT_DIR = path.join(os.homedir(), '.promptvault');
 const CONFIG_PATH = path.join(VAULT_DIR, 'config.json');
 
 const DEFAULT_CONFIG: Config = {
-  apiKey: '',
-  model: 'gpt-4o',
+  ollamaModel: '',
+  ollamaUrl: 'http://localhost:11434',
   defaultTags: [],
   autoAnalyze: false,
 };
@@ -37,6 +37,15 @@ export function getConfig(): Config {
   try {
     const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
     const parsed = JSON.parse(raw);
+    
+    // Migrate old format to new format
+    if (parsed.apiKey !== undefined && parsed.ollamaModel === undefined) {
+       parsed.ollamaModel = parsed.model || '';
+       parsed.ollamaUrl = 'http://localhost:11434';
+       delete parsed.apiKey;
+       delete parsed.model;
+    }
+
     return { ...DEFAULT_CONFIG, ...parsed };
   } catch (err) {
     return DEFAULT_CONFIG;
@@ -51,9 +60,9 @@ export function saveConfig(config: Partial<Config>): Config {
   return updated;
 }
 
-export function getApiKey(): string {
+export function getOllamaModel(): string {
   const config = getConfig();
-  return config.apiKey || process.env.OPENAI_API_KEY || '';
+  return config.ollamaModel;
 }
 
 export function getVaultDir(): string {

@@ -1,39 +1,48 @@
 import axios from 'axios';
-import { getConfig, getApiKey } from './config.js';
+import { getConfig, getOllamaModel } from './config.js';
 
 export async function callLLM(
   systemMessage: string, 
   userMessage: string, 
   jsonFormat: boolean = false
 ): Promise<string> {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    throw new Error('OpenAI API key not configured. Run "pv config" first.');
+  const model = getOllamaModel();
+  if (!model) {
+    throw new Error('No local Ollama model configured. Run "pv config" first.');
   }
 
-  const { model } = getConfig();
+  const { ollamaUrl } = getConfig();
   
   const payload: any = {
-    model: model || 'gpt-4o',
+    model: model,
     messages: [
       { role: 'system', content: systemMessage },
       { role: 'user', content: userMessage }
     ],
-    temperature: 0.7,
+    stream: false,
+    options: {
+      temperature: 0.7
+    }
   };
 
   if (jsonFormat) {
-    payload.response_format = { type: 'json_object' };
+    payload.format = 'json';
   }
 
-  const res = await axios.post('https://api.openai.com/v1/chat/completions', payload, {
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    }
-  });
+  try {
+    const res = await axios.post(`${ollamaUrl}/api/chat`, payload, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
 
-  return res.data.choices[0].message.content;
+    return res.data.message.content;
+  } catch (err: any) {
+    if (err.code === 'ECONNREFUSED' || err.message.includes('ECONNREFUSED')) {
+      throw new Error(`Connection to Ollama refused on ${ollamaUrl}. Is the Ollama app running locally?`);
+    }
+    throw new Error(`Ollama API error: ${err.message}`);
+  }
 }
 
 export async function callLLMJson<T>(systemMessage: string, userMessage: string): Promise<T> {
@@ -41,6 +50,6 @@ export async function callLLMJson<T>(systemMessage: string, userMessage: string)
   try {
     return JSON.parse(content) as T;
   } catch (err) {
-    throw new Error('Failed to parse JSON response from LLM');
+    throw new Error('Failed to parse JSON response from local model.');
   }
 }
