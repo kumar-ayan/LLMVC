@@ -115,7 +115,7 @@ program
 
 program
   .command('config')
-  .description('Set OpenAI API Key, Model, and preferences')
+  .description('Set Ollama Model, Host, and preferences')
   .option('--show', 'Show current settings')
   .action(configCommand);
 

@@ -39,7 +39,7 @@ Before using AI features (like `analyze`, `eval`, or `fix`), run:
 ```bash
 pv config
 ```
-This interactive prompt will ask for your OpenAI (or compatible) API Key and preferred model.
+This interactive prompt will scan your system for VRAM and ask for your preferred local Ollama model to download.
 
 ## Command Reference
 
