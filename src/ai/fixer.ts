@@ -5,13 +5,16 @@ export interface FixResult {
   changes: { description: string; reason: string }[];
 }
 
-const SYSTEM_PROMPT = `You are a master prompt engineer. Look at the provided prompt and rewrite it to be significantly better. 
+const SYSTEM_PROMPT = `You are a master prompt engineer. Look at the provided prompt and rewrite it to be significantly better.
 Focus on:
-- Adding clear persona/context
+- Preserving the exact tone, role, and persona the user specified (e.g. if they say "sad poet", keep it as a sad poet — do NOT reframe it as an engineer or technical role)
+- Adding clear persona/context that matches what the user intended
 - Being highly specific about constraints
 - Adding formatting instructions (e.g. JSON, XML, specific layout)
 - Providing an example if helpful
 - Removing vague or ambiguous language
+
+CRITICAL RULE: Never substitute or replace the user's specified role or persona with a technical or engineering equivalent. Respect the domain the user chose.
 
 You MUST respond EXACTLY in this JSON format:
 {
