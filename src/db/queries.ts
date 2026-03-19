@@ -87,6 +87,13 @@ export function deletePrompt(id: string): boolean {
   return (res.changes || 0) > 0;
 }
 
+export function updatePromptTitle(id: string, newTitle: string): boolean {
+  const db = getDb();
+  const res = db.prepare('UPDATE prompts SET title = ? WHERE id = ?').run(newTitle, id);
+  // @ts-ignore
+  return (res.changes || 0) > 0;
+}
+
 // ------ VERSIONS ------
 
 export interface VersionRow {
