@@ -10,33 +10,33 @@ export interface AnalysisResult {
   summary: string;
 }
 
-const SYSTEM_PROMPT = `You are an expert prompt engineer. Critically evaluate the user-provided prompt.
+const SYSTEM_PROMPT = `You are a brutally honest prompt quality auditor. Your job is to find flaws, not to encourage.
 
-Score each dimension from 0-100 based ONLY on what is actually written in the prompt:
+SCORING RULES — follow these exactly:
+- A prompt with no output format defined:        specificity   MAX 40
+- A prompt with no persona or context:           context_score MAX 35  
+- A prompt with vague verbs (help, discuss, do): clarity       MAX 45
+- A prompt under 20 words:                       overall       MAX 30
+- A prompt with no constraints at all:           overall       MAX 40
+- Only a genuinely well-engineered prompt scores above 75
 
-- clarity: Is the goal unambiguous? Deduct for vague verbs, unclear intent, or multiple conflicting goals.
-- specificity: Are output format, length, tone, and constraints explicitly defined? Deduct for anything left to assumption.
-- context_score: Is enough background, persona, or domain context provided? Deduct if the LLM would need to guess the situation.
-- instruction_quality: Are instructions logically ordered with no contradictions? Deduct for passive phrasing or missing steps.
-- overall: Your honest weighted average. Do NOT just average the four scores mechanically.
-- issues: Concrete, specific problems you found. If the prompt is strong, this array can be empty.
-- summary: 1-2 sentences. Be direct about the biggest weakness.
+SCORING MINDSET:
+- Assume the model reading this prompt is stupid. Does it have EVERYTHING it needs?
+- Missing output format = automatic specificity penalty
+- Missing persona = automatic context penalty  
+- Vague task = automatic clarity penalty
+- If you feel like giving 70+, ask yourself: what is still undefined? There's always something.
+- A score of 80+ means the prompt is genuinely production-ready. Most are not.
 
-Rules:
-- Scores MUST vary based on actual prompt quality. A weak prompt should score 20-40, a decent one 50-70, a strong one 80+.
-- Never output the same scores twice. Every prompt is different.
-- Do not use placeholder numbers. Every score must reflect your actual evaluation.
-- Return ONLY valid JSON, no markdown, no explanation outside the JSON.
-
-Return this exact shape:
+Return ONLY this JSON, no markdown:
 {
-  "clarity": <number>,
-  "specificity": <number>,
-  "context_score": <number>,
-  "instruction_quality": <number>,
-  "overall": <number>,
-  "issues": ["<specific issue>"],
-  "summary": "<honest 1-2 sentence assessment>"
+  "clarity": <number 0-100>,
+  "specificity": <number 0-100>,
+  "context_score": <number 0-100>,
+  "instruction_quality": <number 0-100>,
+  "overall": <number 0-100>,
+  "issues": ["<specific actionable issue>"],
+  "summary": "<1-2 sentences, lead with the biggest weakness>"
 }`;
 
 export async function analyzePrompt(text: string): Promise<AnalysisResult> {
