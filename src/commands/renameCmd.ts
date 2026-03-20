@@ -2,20 +2,22 @@ import { getDb } from '../db/schema.js';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { updatePromptTitle } from '../db/queries.js';
+import { sanitizeForTerminal } from '../utils/terminal.js';
 
 export async function renameCommand(id: string, newTitle: string) {
   const row = getDb().prepare('SELECT id, title, tags FROM prompts WHERE id LIKE ?').get(`${id}%`) as { id: string, title: string, tags: string } | undefined;
-  
+
   if (!row) {
     console.log(chalk.red(`⚠ Prompt with ID starting with "${id}" not found.`));
     return;
   }
 
+  const safeTitle = sanitizeForTerminal(newTitle);
   const res = await inquirer.prompt([
     {
       type: 'confirm',
       name: 'confirm',
-      message: `Rename to '${chalk.bold(newTitle)}'?`,
+      message: `Rename to '${chalk.bold(safeTitle)}'?`,
       default: false
     }
   ]);
@@ -26,11 +28,11 @@ export async function renameCommand(id: string, newTitle: string) {
   }
 
   const success = updatePromptTitle(row.id, newTitle);
-  
+
   if (success) {
     const shortId = row.id.split('-')[0];
-    const tagDisplay = row.tags ? `[${row.tags.split(',')[0].trim()}] ` : '';
-    console.log(`\n${chalk.green('✓')} Prompt ${tagDisplay}${newTitle} #${shortId} renamed successfully`);
+    const tagDisplay = row.tags ? `[${sanitizeForTerminal(row.tags.split(',')[0].trim())}] ` : '';
+    console.log(`\n${chalk.green('✓')} Prompt ${tagDisplay}${safeTitle} #${shortId} renamed successfully`);
   } else {
     console.log(`\n${chalk.red('⚠')} Failed to rename prompt.`);
   }

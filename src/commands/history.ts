@@ -4,6 +4,7 @@ import { getPrompt, getVersions, getLatestAnalysis } from '../db/queries.js';
 import Table from 'cli-table3';
 import { formatTimeAgo } from '../utils/time.js';
 import { getScoreColor } from '../ui/scoreCard.js';
+import { sanitizeForTerminal } from '../utils/terminal.js';
 
 export async function historyCommand(id: string) {
 
@@ -20,7 +21,7 @@ export async function historyCommand(id: string) {
 
   if (!prompt) return;
 
-  console.log(`\nHistory for: ${chalk.bold(prompt.title)} (${chalk.dim(promptId.split('-')[0])})`);
+  console.log(`\nHistory for: ${chalk.bold(sanitizeForTerminal(prompt.title))} (${chalk.dim(promptId.split('-')[0])})`);
 
   const table = new Table({
     head: [chalk.cyan('Version'), chalk.cyan('Score'), chalk.cyan('Date'), chalk.cyan('Lines')],

@@ -2,16 +2,21 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import ora from 'ora';
 import os from 'os';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { getConfig, saveConfig } from '../utils/config.js';
+import { sanitizeForTerminal } from '../utils/terminal.js';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+function isValidModelName(model: string): boolean {
+  return /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/.test(model);
+}
 
 async function detectVRAM(): Promise<number> {
   try {
     if (process.platform === 'win32') {
-      const { stdout } = await execAsync('wmic path win32_VideoController get AdapterRAM');
+      const { stdout } = await execFileAsync('wmic', ['path', 'win32_VideoController', 'get', 'AdapterRAM']);
       const lines = stdout.split('\n').filter(line => line.trim().length > 0);
       let maxVram = 0;
       // skip the header "AdapterRAM"
@@ -55,9 +60,9 @@ export async function configCommand(options: { show?: boolean }) {
 
   if (options.show) {
     console.log(chalk.bold('\nPromptVault Local Configuration:'));
-    console.log(`  Ollama Model: ${chalk.cyan(current.ollamaModel || '(not set)')}`);
-    console.log(`  Ollama Host:  ${chalk.cyan(current.ollamaUrl)}`);
-    console.log(`  Default Tags: ${chalk.cyan(current.defaultTags.join(', ') || '(none)')}`);
+    console.log(`  Ollama Model: ${chalk.cyan(sanitizeForTerminal(current.ollamaModel || '(not set)'))}`);
+    console.log(`  Ollama Host:  ${chalk.cyan(sanitizeForTerminal(current.ollamaUrl))}`);
+    console.log(`  Default Tags: ${chalk.cyan(sanitizeForTerminal(current.defaultTags.join(', ') || '(none)'))}`);
     console.log(`  Auto-analyze: ${chalk.cyan(current.autoAnalyze ? 'Yes' : 'No')}`);
     console.log('');
     return;
@@ -98,9 +103,14 @@ export async function configCommand(options: { show?: boolean }) {
     }
 
     if (finalModel) {
+      if (!isValidModelName(finalModel)) {
+        console.log(chalk.red('⚠ Model name contains unsupported characters.'));
+        return;
+      }
+
       const pullSpinner = ora(`Pulling ${finalModel} via Ollama (this may take a while)...`).start();
       try {
-        await execAsync(`ollama pull ${finalModel}`);
+        await execFileAsync('ollama', ['pull', finalModel]);
         pullSpinner.succeed(`Successfully downloaded ${finalModel}`);
       } catch (err: any) {
         pullSpinner.fail(`Failed to pull model: ${finalModel}`);
@@ -138,6 +148,10 @@ export async function configCommand(options: { show?: boolean }) {
     autoAnalyze: prefs.autoAnalyze
   };
 
-  saveConfig(newConfig);
-  console.log(`\n${chalk.green('✓')} Local Configuration saved!\n`);
+  try {
+    saveConfig(newConfig);
+    console.log(`\n${chalk.green('✓')} Local Configuration saved!\n`);
+  } catch (err: any) {
+    console.log(chalk.red(`\n⚠ ${err.message}\n`));
+  }
 }

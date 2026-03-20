@@ -2,6 +2,7 @@ import { getDb } from '../db/schema.js';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { deletePrompt } from '../db/queries.js';
+import { sanitizeForTerminal } from '../utils/terminal.js';
 
 export async function deleteCommand(id: string) {
 
@@ -16,7 +17,7 @@ export async function deleteCommand(id: string) {
     {
       type: 'confirm',
       name: 'confirm',
-      message: `Are you sure you want to delete "${chalk.bold(row.title)}"? This cannot be undone.`,
+      message: `Are you sure you want to delete "${chalk.bold(sanitizeForTerminal(row.title))}"? This cannot be undone.`,
       default: false
     }
   ]);

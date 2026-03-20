@@ -4,6 +4,7 @@ import ora from 'ora';
 import { fetchAndCleanWebpage } from '../utils/fetch.js';
 import { extractPrompts } from '../ai/extractor.js';
 import { createPrompt } from '../db/queries.js';
+import { sanitizeForTerminal } from '../utils/terminal.js';
 
 export async function importCommand(options: { url?: string, text?: boolean }) {
   let rawText = '';
@@ -55,7 +56,7 @@ export async function importCommand(options: { url?: string, text?: boolean }) {
 
   console.log('');
   const choices = extracted.map((ext, idx) => ({
-    name: `${chalk.bold(ext.title)} ${chalk.dim(`(${ext.tags.join(', ')})`)}\n  ${chalk.italic(ext.description)}`,
+    name: `${chalk.bold(sanitizeForTerminal(ext.title))} ${chalk.dim(`(${sanitizeForTerminal(ext.tags.join(', '))})`)}\n  ${chalk.italic(sanitizeForTerminal(ext.description))}`,
     value: ext,
     checked: true
   }));
@@ -77,6 +78,6 @@ export async function importCommand(options: { url?: string, text?: boolean }) {
   for (const ext of answer.selected) {
     const tagsStr = ext.tags.join(', ');
     const id = createPrompt(ext.title, ext.description, tagsStr, ext.text);
-    console.log(`\n${chalk.green('✓')} Imported "${ext.title}" -> ID: ${chalk.cyan(id.split('-')[0])}`);
+    console.log(`\n${chalk.green('✓')} Imported "${sanitizeForTerminal(ext.title)}" -> ID: ${chalk.cyan(id.split('-')[0])}`);
   }
 }

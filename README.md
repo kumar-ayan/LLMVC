@@ -59,6 +59,16 @@ npm install -g .
 
 You can now use the `pv` command anywhere in your terminal!
 
+## Verify Everything Is Working
+
+After installation, run the smoke test to confirm the project is building correctly and the main safety checks are working:
+
+```bash
+npm run smoke
+```
+
+This checks the TypeScript build, generated `dist` output, prompt database access, local config validation, SSRF blocking, and terminal output sanitization.
+
 ## Configuration
 
 Before using AI features (like `analyze`, `eval`, or `fix`), run:
@@ -122,6 +132,7 @@ Running `pv analyze` produces a detailed grading scorecard:
 ## Setup
 npm install
 npm run build
+npm run smoke
 npm install -g .
 
 ## Questions?
