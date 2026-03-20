@@ -14,9 +14,11 @@ import { evalCommand } from './commands/eval.js';
 import { historyCommand } from './commands/history.js';
 import { deleteCommand } from './commands/delete.js';
 import { exportCommand } from './commands/export.js';
+import { renameCommand } from './commands/renameCmd.js';
 import { configCommand } from './commands/config.js';
 import { searchCommand } from './commands/search.js';
 import { importCommand } from './commands/importCmd.js';
+import { statsCommand } from './commands/statsCmd.js';
 import { getOllamaModel } from './utils/config.js';
 
 const program = new Command();
@@ -107,6 +109,11 @@ program
   .action(deleteCommand);
 
 program
+  .command('rename <id> <new-title>')
+  .description('Rename a prompt')
+  .action(renameCommand);
+
+program
   .command('export')
   .description('Export the entire vault to a readable file')
   .option('--json', 'Export raw JSON backup with versions')
@@ -123,6 +130,11 @@ program
   .command('search <keyword>')
   .description('Full-text search across all prompts and tags')
   .action(searchCommand);
+
+program
+  .command('stats')
+  .description('Show vault-wide analytics dashboard')
+  .action(statsCommand);
 
 program.parse(process.argv);
 

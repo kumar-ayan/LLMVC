@@ -2,6 +2,7 @@ import { getDb } from '../db/schema.js';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { getLatestVersion, createVersion } from '../db/queries.js';
+import { sanitizeForTerminal } from '../utils/terminal.js';
 
 export async function editCommand(id: string) {
 
@@ -20,7 +21,7 @@ export async function editCommand(id: string) {
     return;
   }
 
-  console.log(`Editing prompt: ${chalk.bold(row.title)}`);
+  console.log(`Editing prompt: ${chalk.bold(sanitizeForTerminal(row.title))}`);
 
   const res = await inquirer.prompt([
     {

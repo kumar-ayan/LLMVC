@@ -2,11 +2,11 @@ import { getDb } from '../db/schema.js';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { getVersionByNumber, createVersion } from '../db/queries.js';
+import { sanitizeForTerminal } from '../utils/terminal.js';
 
 export async function rollbackCommand(id: string, options: { to: string }) {
-
   const row = getDb().prepare('SELECT id, title FROM prompts WHERE id LIKE ?').get(`${id}%`) as { id: string, title: string } | undefined;
-  
+
   if (!row) {
     console.log(chalk.red(`⚠ Prompt with ID starting with "${id}" not found.`));
     return;
@@ -31,7 +31,7 @@ export async function rollbackCommand(id: string, options: { to: string }) {
     {
       type: 'confirm',
       name: 'confirm',
-      message: `Roll back "${chalk.bold(row.title)}" to v${targetNum}? (This creates a new version preserving history)`,
+      message: `Roll back "${chalk.bold(sanitizeForTerminal(row.title))}" to v${targetNum}? (This creates a new version preserving history)`,
       default: true
     }
   ]);

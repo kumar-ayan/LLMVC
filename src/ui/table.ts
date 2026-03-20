@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import { PromptWithMeta } from '../db/queries.js';
 import { formatTimeAgo } from '../utils/time.js';
 import { getScoreColor } from './scoreCard.js';
+import { sanitizeForTerminal } from '../utils/terminal.js';
 
 export function printPromptsTable(prompts: PromptWithMeta[]): void {
   const table = new Table({
@@ -25,7 +26,9 @@ export function printPromptsTable(prompts: PromptWithMeta[]): void {
 
   for (const p of prompts) {
     const id = chalk.dim(p.id.split('-')[0]); // short id
-    const title = p.title.length > 25 ? p.title.substring(0, 22) + '...' : p.title;
+    const safeTitle = sanitizeForTerminal(p.title);
+    const safeTags = sanitizeForTerminal(p.tags);
+    const title = safeTitle.length > 25 ? safeTitle.substring(0, 22) + '...' : safeTitle;
     const ver = `v${p.latest_version}`;
     
     let scoreStr = chalk.dim('-');
@@ -33,7 +36,7 @@ export function printPromptsTable(prompts: PromptWithMeta[]): void {
       scoreStr = getScoreColor(p.latest_score)(p.latest_score.toString());
     }
 
-    const tags = p.tags ? chalk.blue(p.tags.substring(0, 25)) : chalk.dim('none');
+    const tags = safeTags ? chalk.blue(safeTags.substring(0, 25)) : chalk.dim('none');
     const updated = chalk.dim(formatTimeAgo(p.created_at));
 
     table.push([id, title, ver, scoreStr, tags, updated]);

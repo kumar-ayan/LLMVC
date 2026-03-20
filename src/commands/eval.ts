@@ -2,14 +2,14 @@ import { getDb } from '../db/schema.js';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import ora from 'ora';
-import { getLatestVersion, getTestCases, addTestCase, createEvalRun, saveEvalResult, updateEvalRunScore, getPrompt } from '../db/queries.js';
+import { getLatestVersion, getTestCases, addTestCase, createEvalRun, saveEvalResult, updateEvalRunScore } from '../db/queries.js';
 import { callLLM } from '../utils/llm.js';
 import { judgeOutput } from '../ai/evaluator.js';
+import { sanitizeForTerminal } from '../utils/terminal.js';
 
 export async function evalCommand(id: string, options: { add?: boolean, run?: boolean }) {
-
   const row = getDb().prepare('SELECT id, title FROM prompts WHERE id LIKE ?').get(`${id}%`) as { id: string, title: string } | undefined;
-  
+
   if (!row) {
     console.log(chalk.red(`⚠ Prompt with ID starting with "${id}" not found.`));
     return;
@@ -47,11 +47,11 @@ export async function evalCommand(id: string, options: { add?: boolean, run?: bo
 
     const testCases = getTestCases(promptId);
     if (testCases.length === 0) {
-      console.log(chalk.yellow(`⚠ No test cases found on this prompt. Run "pv eval ${id.substring(0,6)} --add" first.`));
+      console.log(chalk.yellow(`⚠ No test cases found on this prompt. Run "pv eval ${id.substring(0, 6)} --add" first.`));
       return;
     }
 
-    console.log(`Running ${testCases.length} test cases on ${chalk.bold(row.title)} v${version.version_num}...\n`);
+    console.log(`Running ${testCases.length} test cases on ${chalk.bold(sanitizeForTerminal(row.title))} v${version.version_num}...\n`);
 
     const evalRunId = createEvalRun(promptId, version.id);
     let totalScore = 0;
@@ -67,13 +67,11 @@ export async function evalCommand(id: string, options: { add?: boolean, run?: bo
       let reason = '';
 
       try {
-        // Run test payload through current prompt string representing SYSTEM message
         output = await callLLM(version.text, tc.input);
 
-        // Grade output 
         const evaluation = await judgeOutput(tc.input, tc.expected_output, output);
         score = evaluation.score;
-        reason = evaluation.reasoning;
+        reason = sanitizeForTerminal(evaluation.reasoning);
 
         saveEvalResult(evalRunId, tc.id, output, score, reason);
         totalScore += score;
@@ -87,15 +85,14 @@ export async function evalCommand(id: string, options: { add?: boolean, run?: bo
         } else {
           spinner.fail(`Test ${i + 1}  Score: ${chalk.red(score)}/10  "${chalk.dim(reason)}"`);
         }
-
       } catch (err: any) {
-        spinner.fail(`Test ${i + 1}  Error: ${err.message}`);
+        spinner.fail(`Test ${i + 1}  Error: ${sanitizeForTerminal(err.message)}`);
         saveEvalResult(evalRunId, tc.id, `Error: ${err.message}`, 0, '');
       }
     }
 
     if (testsRan > 0) {
-      const avgScore = (totalScore / testsRan) * 10; // scale 1-10 string into a total /100 equivalent if needed, or stick to raw. Wait, CLI spec says /100
+      const avgScore = (totalScore / testsRan) * 10;
       updateEvalRunScore(evalRunId, avgScore);
       console.log(chalk.dim('\n─────────────────────────────────────────'));
       console.log(`  Overall: ${chalk.bold(Math.round(avgScore))}/100  (${testsPassed}/${testsRan} passed)\n`);
@@ -104,8 +101,7 @@ export async function evalCommand(id: string, options: { add?: boolean, run?: bo
     return;
   }
 
-  // Interactive Menu if neither flag is passed
-  console.log(chalk.bold(`\nEval Manager for: ${row.title}\n`));
+  console.log(chalk.bold(`\nEval Manager for: ${sanitizeForTerminal(row.title)}\n`));
   const testCases = getTestCases(promptId);
   console.log(`Current test cases: ${chalk.cyan(testCases.length)}`);
 

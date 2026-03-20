@@ -1,10 +1,10 @@
 import { getDb } from '../db/schema.js';
 import chalk from 'chalk';
-import { getPrompt, getLatestVersion, getLatestAnalysis } from '../db/queries.js';
-import { displayScoreCard } from '../ui/scoreCard.js';
+import { getPrompt, getLatestVersion } from '../db/queries.js';
 import { marked } from 'marked';
 // @ts-ignore
 import TerminalRenderer from 'marked-terminal';
+import { sanitizeForTerminal } from '../utils/terminal.js';
 
 // Setup marked to use terminal renderer
 marked.setOptions({
@@ -30,13 +30,13 @@ export async function viewCommand(id: string) {
     return;
   }
 
-  console.log('\n' + chalk.bold(prompt.title));
-  if (prompt.description) console.log(chalk.dim(prompt.description));
-  if (prompt.tags) console.log(chalk.blue(prompt.tags));
+  console.log('\n' + chalk.bold(sanitizeForTerminal(prompt.title)));
+  if (prompt.description) console.log(chalk.dim(sanitizeForTerminal(prompt.description)));
+  if (prompt.tags) console.log(chalk.blue(sanitizeForTerminal(prompt.tags)));
 
   console.log(chalk.dim(`\n--- v${version.version_num} ---`));
 
-  // Render markdown safely in terminal
-  const mdText = marked.parse(version.text) as string;
+  // Render markdown after stripping terminal control sequences from stored content.
+  const mdText = marked.parse(sanitizeForTerminal(version.text)) as string;
   console.log(mdText);
 }

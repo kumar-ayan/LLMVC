@@ -5,6 +5,7 @@ import inquirer from 'inquirer';
 import { getLatestVersion, createVersion } from '../db/queries.js';
 import { fixPrompt } from '../ai/fixer.js';
 import { printWordDiff, printFixComparison } from '../ui/diffView.js';
+import { sanitizeForTerminal } from '../utils/terminal.js';
 
 export async function fixCommand(id: string) {
 
@@ -23,7 +24,7 @@ export async function fixCommand(id: string) {
     return;
   }
 
-  console.log(`Fixing: ${chalk.bold(row.title)} (v${version.version_num})`);
+  console.log(`Fixing: ${chalk.bold(sanitizeForTerminal(row.title))} (v${version.version_num})`);
 
   const spinner = ora('AI is rewriting and improving your prompt...').start();
   let fixResult;
