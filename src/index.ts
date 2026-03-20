@@ -18,6 +18,7 @@ import { renameCommand } from './commands/renameCmd.js';
 import { configCommand } from './commands/config.js';
 import { searchCommand } from './commands/search.js';
 import { importCommand } from './commands/importCmd.js';
+import { statsCommand } from './commands/statsCmd.js';
 import { getOllamaModel } from './utils/config.js';
 
 const program = new Command();
@@ -129,6 +130,11 @@ program
   .command('search <keyword>')
   .description('Full-text search across all prompts and tags')
   .action(searchCommand);
+
+program
+  .command('stats')
+  .description('Show vault-wide analytics dashboard')
+  .action(statsCommand);
 
 program.parse(process.argv);
 

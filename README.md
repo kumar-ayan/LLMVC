@@ -85,6 +85,7 @@ This interactive prompt will scan your system for VRAM and ask for your preferre
 | `pv import --text` / `--url` | Import and auto-extract prompts from raw chat logs or webpages |
 | `pv list [--tag string]` | List all tracked prompts in a table |
 | `pv search "keyword"` | Full-text search across all prompts and tags |
+| `pv stats` | Show vault-wide analytics dashboard |
 | `pv view <id>` | View the latest prompt version and its AI analysis |
 | `pv edit <id>` | Open the latest version in `$EDITOR` and save changes as a new version |
 | `pv diff <id> --v1 X --v2 Y`| Show a word-level colorized diff between two versions |
