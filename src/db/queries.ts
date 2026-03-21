@@ -20,6 +20,26 @@ export interface PromptWithMeta extends PromptRow {
   latest_score: number | null;
 }
 
+export interface VaultCounts {
+  prompt_count: number;
+  version_count: number;
+  eval_run_count: number;
+}
+
+export interface PromptScoreSummary {
+  id: string;
+  title: string;
+  latest_version: number;
+  latest_score: number | null;
+}
+
+export interface ImprovedPromptSummary {
+  id: string;
+  title: string;
+  first_score: number;
+  latest_score: number;
+}
+
 export function createPrompt(title: string, description: string, tags: string, initialText: string): string {
   const db = getDb();
   const promptId = uuid();
@@ -57,6 +77,73 @@ export function getAllPrompts(): PromptWithMeta[] {
   `).all() as PromptWithMeta[];
 }
 
+export function getVaultCounts(): VaultCounts {
+  const db = getDb();
+  return db.prepare(`
+    SELECT
+      (SELECT COUNT(*) FROM prompts) AS prompt_count,
+      (SELECT COUNT(*) FROM prompt_versions) AS version_count,
+      (SELECT COUNT(*) FROM eval_runs) AS eval_run_count
+  `).get() as VaultCounts;
+}
+
+export function getLatestPromptScores(): PromptScoreSummary[] {
+  const db = getDb();
+  return db.prepare(`
+    SELECT *
+    FROM (
+      SELECT
+        p.id,
+        p.title,
+        COALESCE((SELECT MAX(version_num) FROM prompt_versions WHERE prompt_id = p.id), 0) AS latest_version,
+        (
+          SELECT a.overall
+          FROM analyses a
+          JOIN prompt_versions v ON v.id = a.version_id
+          WHERE v.prompt_id = p.id
+          ORDER BY v.version_num DESC, a.created_at DESC
+          LIMIT 1
+        ) AS latest_score
+      FROM prompts p
+    )
+    ORDER BY latest_score DESC, title ASC
+  `).all() as PromptScoreSummary[];
+}
+
+export function getMostImprovedPrompt(): ImprovedPromptSummary | null {
+  const db = getDb();
+  const row = db.prepare(`
+    SELECT *
+    FROM (
+      SELECT
+        p.id,
+        p.title,
+        (
+          SELECT a.overall
+          FROM analyses a
+          JOIN prompt_versions v ON v.id = a.version_id
+          WHERE v.prompt_id = p.id AND v.version_num = 1
+          ORDER BY a.created_at DESC
+          LIMIT 1
+        ) AS first_score,
+        (
+          SELECT a.overall
+          FROM analyses a
+          JOIN prompt_versions v ON v.id = a.version_id
+          WHERE v.prompt_id = p.id
+          ORDER BY v.version_num DESC, a.created_at DESC
+          LIMIT 1
+        ) AS latest_score
+      FROM prompts p
+    )
+    WHERE first_score IS NOT NULL AND latest_score IS NOT NULL
+    ORDER BY (latest_score - first_score) DESC, latest_score DESC, title ASC
+    LIMIT 1
+  `).get() as ImprovedPromptSummary | undefined;
+
+  return row || null;
+}
+
 export function getPrompt(id: string): PromptRow | null {
   const db = getDb();
   const row = db.prepare('SELECT * FROM prompts WHERE id = ?').get(id) as PromptRow | undefined;
@@ -83,6 +170,13 @@ export function searchPrompts(query: string): PromptWithMeta[] {
 export function deletePrompt(id: string): boolean {
   const db = getDb();
   const res = db.prepare('DELETE FROM prompts WHERE id = ?').run(id);
+  // @ts-ignore
+  return (res.changes || 0) > 0;
+}
+
+export function updatePromptTitle(id: string, newTitle: string): boolean {
+  const db = getDb();
+  const res = db.prepare('UPDATE prompts SET title = ? WHERE id = ?').run(newTitle, id);
   // @ts-ignore
   return (res.changes || 0) > 0;
 }

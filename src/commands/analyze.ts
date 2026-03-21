@@ -4,6 +4,7 @@ import ora from 'ora';
 import { getLatestVersion, saveAnalysis } from '../db/queries.js';
 import { analyzePrompt } from '../ai/analyzer.js';
 import { displayScoreCard } from '../ui/scoreCard.js';
+import { sanitizeForTerminal } from '../utils/terminal.js';
 
 export async function analyzeCommand(id: string) {
 
@@ -22,7 +23,7 @@ export async function analyzeCommand(id: string) {
     return;
   }
 
-  console.log(`Analyzing: ${chalk.bold(row.title)} (v${version.version_num})`);
+  console.log(`Analyzing: ${chalk.bold(sanitizeForTerminal(row.title))} (v${version.version_num})`);
 
   const spinner = ora('AI is grading your prompt...').start();
   try {

@@ -2,11 +2,12 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import ora from 'ora';
 import os from 'os';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { Config, getConfig, saveConfig } from '../utils/config.js';
+import { sanitizeForTerminal } from '../utils/terminal.js';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 const GEMINI_MODELS = [
   { name: 'gemini-2.5-flash (Balanced, recommended)', value: 'gemini-2.5-flash' },
@@ -14,10 +15,14 @@ const GEMINI_MODELS = [
   { name: 'gemini-2.5-pro (Best reasoning quality)', value: 'gemini-2.5-pro' }
 ];
 
+function isValidModelName(model: string): boolean {
+  return /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/.test(model);
+}
+
 async function detectVRAM(): Promise<number> {
   try {
     if (process.platform === 'win32') {
-      const { stdout } = await execAsync('wmic path win32_VideoController get AdapterRAM');
+      const { stdout } = await execFileAsync('wmic', ['path', 'win32_VideoController', 'get', 'AdapterRAM']);
       const lines = stdout.split('\n').filter(line => line.trim().length > 0);
       let maxVram = 0;
 
@@ -108,9 +113,13 @@ async function configureOllama(current: Config): Promise<Partial<Config>> {
     }
 
     if (finalModel) {
+      if (!isValidModelName(finalModel)) {
+        throw new Error('Model name contains unsupported characters.');
+      }
+
       const pullSpinner = ora(`Pulling ${finalModel} via Ollama (this may take a while)...`).start();
       try {
-        await execAsync(`ollama pull ${finalModel}`);
+        await execFileAsync('ollama', ['pull', finalModel]);
         pullSpinner.succeed(`Successfully downloaded ${finalModel}`);
       } catch (err: any) {
         pullSpinner.fail(`Failed to pull model: ${finalModel}`);
@@ -225,6 +234,10 @@ async function configureGemini(current: Config): Promise<Partial<Config>> {
     geminiModel = customModelRes.model.trim();
   }
 
+  if (!isValidModelName(geminiModel)) {
+    throw new Error('Model name contains unsupported characters.');
+  }
+
   return {
     provider: 'gemini',
     geminiModel,
@@ -239,12 +252,12 @@ export async function configCommand(options: { show?: boolean }) {
 
   if (options.show) {
     console.log(chalk.bold('\nPromptVault Local Configuration:'));
-    console.log(`  Provider:     ${chalk.cyan(current.provider)}`);
-    console.log(`  Ollama Model: ${chalk.cyan(current.ollamaModel || '(not set)')}`);
-    console.log(`  Ollama Host:  ${chalk.cyan(current.ollamaUrl)}`);
-    console.log(`  Gemini Model: ${chalk.cyan(current.geminiModel || '(not set)')}`);
+    console.log(`  Provider:     ${chalk.cyan(sanitizeForTerminal(current.provider))}`);
+    console.log(`  Ollama Model: ${chalk.cyan(sanitizeForTerminal(current.ollamaModel || '(not set)'))}`);
+    console.log(`  Ollama Host:  ${chalk.cyan(sanitizeForTerminal(current.ollamaUrl))}`);
+    console.log(`  Gemini Model: ${chalk.cyan(sanitizeForTerminal(current.geminiModel || '(not set)'))}`);
     console.log(`  Gemini Key:   ${chalk.cyan(current.geminiApiKey ? '(set)' : '(not set)')}`);
-    console.log(`  Default Tags: ${chalk.cyan(current.defaultTags.join(', ') || '(none)')}`);
+    console.log(`  Default Tags: ${chalk.cyan(sanitizeForTerminal(current.defaultTags.join(', ') || '(none)'))}`);
     console.log(`  Auto-analyze: ${chalk.cyan(current.autoAnalyze ? 'Yes' : 'No')}`);
     console.log('');
     return;
@@ -263,10 +276,14 @@ export async function configCommand(options: { show?: boolean }) {
     }
   ]);
 
-  const newConfig = answers.provider === 'gemini'
-    ? await configureGemini(current)
-    : await configureOllama(current);
+  try {
+    const newConfig = answers.provider === 'gemini'
+      ? await configureGemini(current)
+      : await configureOllama(current);
 
-  saveConfig(newConfig);
-  console.log(`\n${chalk.green('Saved!')} Local Configuration saved.\n`);
+    saveConfig(newConfig);
+    console.log(`\n${chalk.green('Saved!')} Local Configuration saved.\n`);
+  } catch (err: any) {
+    console.log(chalk.red(`\nWarning: ${err.message}\n`));
+  }
 }

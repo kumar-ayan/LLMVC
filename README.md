@@ -59,6 +59,16 @@ npm install -g .
 
 You can now use the `pv` command anywhere in your terminal!
 
+## Verify Everything Is Working
+
+After installation, run the smoke test to confirm the project is building correctly and the main safety checks are working:
+
+```bash
+npm run smoke
+```
+
+This checks the TypeScript build, generated `dist` output, prompt database access, local config validation, SSRF blocking, and terminal output sanitization.
+
 ## Configuration
 
 Before using AI features (like `analyze`, `eval`, or `fix`), run:
@@ -83,6 +93,7 @@ pv config --show
 | `pv import --text` / `--url` | Import and auto-extract prompts from raw chat logs or webpages |
 | `pv list [--tag string]` | List all tracked prompts in a table |
 | `pv search "keyword"` | Full-text search across all prompts and tags |
+| `pv stats` | Show vault-wide analytics dashboard |
 | `pv view <id>` | View the latest prompt version and its AI analysis |
 | `pv edit <id>` | Open the latest version in `$EDITOR` and save changes as a new version |
 | `pv diff <id> --v1 X --v2 Y`| Show a word-level colorized diff between two versions |
@@ -130,6 +141,7 @@ Running `pv analyze` produces a detailed grading scorecard:
 ## Setup
 npm install
 npm run build
+npm run smoke
 npm install -g .
 
 ## Questions?

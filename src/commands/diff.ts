@@ -2,6 +2,7 @@ import { getDb } from '../db/schema.js';
 import chalk from 'chalk';
 import { getVersionByNumber } from '../db/queries.js';
 import { printWordDiff } from '../ui/diffView.js';
+import { sanitizeForTerminal } from '../utils/terminal.js';
 
 export async function diffCommand(id: string, options: { v1: string, v2: string }) {
 
@@ -33,7 +34,7 @@ export async function diffCommand(id: string, options: { v1: string, v2: string 
     return;
   }
 
-  console.log(`\nDiffing ${chalk.bold(row.title)}`);
+  console.log(`\nDiffing ${chalk.bold(sanitizeForTerminal(row.title))}`);
   console.log(`${chalk.red.strikethrough(`v${v1.version_num}`)} -> ${chalk.green(`v${v2.version_num}`)}`);
   
   printWordDiff(v1.text, v2.text);
