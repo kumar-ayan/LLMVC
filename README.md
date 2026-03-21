@@ -1,6 +1,6 @@
 # PromptVault CLI (`pv`)
 
-A fully local, terminal-first version control and AI-evaluation system for LLM prompts. 
+A terminal-first version control and AI-evaluation system for LLM prompts, with support for local Ollama models or the Gemini API.
 
 ![Node.js](https://img.shields.io/badge/Node.js-18+-black?logo=node.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
@@ -8,11 +8,11 @@ A fully local, terminal-first version control and AI-evaluation system for LLM p
 
 ## Architecture (Local-First Design)
 
-PromptVault is designed for **100% privacy and local control**. There is no cloud backend, no account to create, and no telemetry.
+PromptVault is designed for local control. There is no PromptVault cloud backend, no account to create, and no telemetry.
 - **Storage**: All prompts, versions, and configurations are stored as a local SQLite database at `~/.promptvault/vault.db` using Node's ultra-fast native `node:sqlite` module. 
-- **Configuration**: API keys and preferences are kept locally in `~/.promptvault/config.json`.
+- **Configuration**: Provider settings, API keys, and preferences are kept locally in `~/.promptvault/config.json`.
 - **SSRF Protection**: Importing prompts via URL prevents resolution to local or private IPs.
-- **AI Processing**: LLM API calls are made directly from your machine to the provider.
+- **AI Processing**: LLM API calls are made directly from your machine to the configured provider, either Ollama or Gemini.
 
 ## Prerequisites
 
@@ -75,7 +75,15 @@ Before using AI features (like `analyze`, `eval`, or `fix`), run:
 ```bash
 pv config
 ```
-This interactive prompt will scan your system for VRAM and ask for your preferred local Ollama model to download.
+This interactive prompt now lets you choose and configure the AI provider PromptVault should use.
+It now supports both local and cloud providers:
+- **Ollama**: scans your machine, recommends a model, and can pull it locally
+- **Gemini API**: asks for your Gemini model and API key, then uses Gemini for analysis and other AI-backed commands
+
+To inspect the active setup later:
+```bash
+pv config --show
+```
 
 ## Command Reference
 
