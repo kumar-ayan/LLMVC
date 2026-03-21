@@ -17,7 +17,7 @@ import { exportCommand } from './commands/export.js';
 import { configCommand } from './commands/config.js';
 import { searchCommand } from './commands/search.js';
 import { importCommand } from './commands/importCmd.js';
-import { getOllamaModel } from './utils/config.js';
+import { getProvider, isAiConfigured } from './utils/config.js';
 
 const program = new Command();
 
@@ -26,14 +26,19 @@ program
   .description(chalk.bold('PromptVault') + ' - Local-first version control for LLM prompts.')
   .version('1.0.0');
 
-// Inject Ollama check for AI commands
-function requireOllama(action: (...args: any[]) => void) {
+function requireAiProvider(action: (...args: any[]) => void) {
   return async (...args: any[]) => {
-    if (!getOllamaModel()) {
-      console.log(chalk.yellow('\n⚠ This feature requires a local Ollama model to be selected.'));
-      console.log(`Run ${chalk.cyan('pv config')} to setup and download a local LLM.\n`);
+    if (!isAiConfigured()) {
+      const provider = getProvider();
+      const setupHint = provider === 'gemini'
+        ? 'Run pv config to add your Gemini API key and model.'
+        : 'Run pv config to choose or download an Ollama model.';
+
+      console.log(chalk.yellow('\nWarning: This feature requires an AI provider to be configured.'));
+      console.log(`${chalk.cyan(setupHint)}\n`);
       process.exit(1);
     }
+
     await action(...args);
   };
 }
@@ -48,7 +53,7 @@ program
   .description('Import prompts from text or a webpage URL')
   .option('--text', 'Open editor to paste multi-line text mapping to prompts')
   .option('--url <url>', 'Fetch a webpage and extract prompts')
-  .action(requireOllama(importCommand));
+  .action(requireAiProvider(importCommand));
 
 program
   .command('list')
@@ -82,19 +87,19 @@ program
 program
   .command('analyze <id>')
   .description('Run AI analysis and get a 0-100 scorecard')
-  .action(requireOllama(analyzeCommand));
+  .action(requireAiProvider(analyzeCommand));
 
 program
   .command('fix <id>')
   .description('Generate an improved version of the prompt using AI')
-  .action(requireOllama(fixCommand));
+  .action(requireAiProvider(fixCommand));
 
 program
   .command('eval <id>')
   .description('Manage & run test suites evaluating output accuracy')
   .option('--add', 'Add a new test case')
   .option('--run', 'Run all test cases using LLM-as-judge')
-  .action(requireOllama(evalCommand));
+  .action(requireAiProvider(evalCommand));
 
 program
   .command('history <id>')
@@ -115,7 +120,7 @@ program
 
 program
   .command('config')
-  .description('Set Ollama Model, Host, and preferences')
+  .description('Choose AI provider and configure model, API key, and preferences')
   .option('--show', 'Show current settings')
   .action(configCommand);
 
