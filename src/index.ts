@@ -19,6 +19,7 @@ import { configCommand } from './commands/config.js';
 import { searchCommand } from './commands/search.js';
 import { importCommand } from './commands/importCmd.js';
 import { statsCommand } from './commands/statsCmd.js';
+import { duplicateCommand } from './commands/duplicateCmd.js';
 import { getProvider, isAiConfigured } from './utils/config.js';
 
 const program = new Command();
@@ -140,6 +141,11 @@ program
   .command('stats')
   .description('Show vault-wide analytics dashboard')
   .action(statsCommand);
+
+program
+  .command('duplicate <id>')
+  .description('Duplicate a prompt by ID')
+  .action(duplicateCommand);
 
 program.parse(process.argv);
 

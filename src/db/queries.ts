@@ -62,6 +62,17 @@ export function createPrompt(title: string, description: string, tags: string, i
   return promptId;
 }
 
+export function duplicatePrompt(promptId: string): string {
+  const prompt = getPrompt(promptId);
+  const version = getLatestVersion(promptId);
+  
+  if (!prompt || !version) {
+    throw new Error('Prompt or latest version not found.');
+  }
+
+  return createPrompt(`Copy of ${prompt.title}`, prompt.description, prompt.tags, version.text);
+}
+
 export function getAllPrompts(): PromptWithMeta[] {
   const db = getDb();
   return db.prepare(`
