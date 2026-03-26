@@ -72,13 +72,10 @@ async function callGemini(systemMessage: string, userMessage: string, jsonFormat
   }
 
   const payload: any = {
-    systemInstruction: {
-      parts: [{ text: systemMessage }]
-    },
     contents: [
       {
         role: 'user',
-        parts: [{ text: userMessage }]
+        parts: [{ text: `${systemMessage}\n\n${userMessage}` }]
       }
     ],
     generationConfig: {
@@ -87,7 +84,7 @@ async function callGemini(systemMessage: string, userMessage: string, jsonFormat
     }
   };
 
-  if (jsonFormat) {
+  if (jsonFormat && !geminiModel.toLowerCase().includes('gemma')) {
     payload.generationConfig.responseMimeType = 'application/json';
   }
 
