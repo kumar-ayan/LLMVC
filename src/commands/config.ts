@@ -4,7 +4,7 @@ import ora from 'ora';
 import os from 'os';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { Config, getConfig, saveConfig } from '../utils/config.js';
+import { Config, getConfig, saveConfig, LlmProvider } from '../utils/config.js';
 import { sanitizeForTerminal } from '../utils/terminal.js';
 
 const execFileAsync = promisify(execFile);
@@ -247,20 +247,115 @@ async function configureGemini(current: Config): Promise<Partial<Config>> {
   };
 }
 
-export async function configCommand(options: { show?: boolean }) {
+async function configureOpenRouter(current: Config): Promise<Partial<Config>> {
+  console.log(chalk.bold('\nConfigure PromptVault with OpenRouter:'));
+
+  const questions: any[] = [
+    {
+      type: 'input',
+      name: 'openrouterModel',
+      message: 'Enter OpenRouter model ID (e.g., anthropic/claude-3.5-sonnet):',
+      default: current.openrouterModel || 'anthropic/claude-3.5-sonnet',
+      validate: (input: string) => isValidModelName(input.trim()) || 'Invalid model name format.'
+    },
+    {
+      type: 'confirm',
+      name: 'updateOpenRouterApiKey',
+      message: 'Update OpenRouter API key?',
+      default: false,
+      when: () => Boolean(current.openrouterApiKey)
+    },
+    {
+      type: 'password',
+      name: 'openrouterApiKey',
+      message: current.openrouterApiKey
+        ? 'OpenRouter API Key (leave blank to keep current key):'
+        : 'OpenRouter API Key:',
+      mask: '*',
+      when: (answers: any) => !current.openrouterApiKey || answers.updateOpenRouterApiKey,
+      validate: (input: string) => {
+        if (input.trim() || current.openrouterApiKey) return true;
+        return 'OpenRouter API key is required.';
+      }
+    },
+    {
+      type: 'input',
+      name: 'defaultTags',
+      message: 'Default Tags (comma separated):',
+      default: current.defaultTags.join(', ')
+    },
+    {
+      type: 'confirm',
+      name: 'autoAnalyze',
+      message: 'Auto-run analyze on new versions?',
+      default: current.autoAnalyze
+    }
+  ];
+
+  const answers = await inquirer.prompt(questions);
+
+  return {
+    provider: 'openrouter',
+    openrouterModel: answers.openrouterModel.trim(),
+    openrouterApiKey: (answers.openrouterApiKey || '').trim() || current.openrouterApiKey,
+    defaultTags: answers.defaultTags.split(',').map((tag: string) => tag.trim()).filter(Boolean),
+    autoAnalyze: answers.autoAnalyze
+  };
+}
+
+export async function configCommand(options: { show?: boolean; provider?: string; model?: string; key?: string }) {
   const current = getConfig();
 
   if (options.show) {
     console.log(chalk.bold('\nPromptVault Local Configuration:'));
-    console.log(`  Provider:     ${chalk.cyan(sanitizeForTerminal(current.provider))}`);
-    console.log(`  Ollama Model: ${chalk.cyan(sanitizeForTerminal(current.ollamaModel || '(not set)'))}`);
-    console.log(`  Ollama Host:  ${chalk.cyan(sanitizeForTerminal(current.ollamaUrl))}`);
-    console.log(`  Gemini Model: ${chalk.cyan(sanitizeForTerminal(current.geminiModel || '(not set)'))}`);
-    console.log(`  Gemini Key:   ${chalk.cyan(current.geminiApiKey ? '(set)' : '(not set)')}`);
-    console.log(`  Default Tags: ${chalk.cyan(sanitizeForTerminal(current.defaultTags.join(', ') || '(none)'))}`);
-    console.log(`  Auto-analyze: ${chalk.cyan(current.autoAnalyze ? 'Yes' : 'No')}`);
+    console.log(`  Provider:        ${chalk.cyan(sanitizeForTerminal(current.provider))}`);
+    console.log(`  Ollama Model:    ${chalk.cyan(sanitizeForTerminal(current.ollamaModel || '(not set)'))}`);
+    console.log(`  Ollama Host:     ${chalk.cyan(sanitizeForTerminal(current.ollamaUrl))}`);
+    console.log(`  Gemini Model:    ${chalk.cyan(sanitizeForTerminal(current.geminiModel || '(not set)'))}`);
+    console.log(`  Gemini Key:      ${chalk.cyan(current.geminiApiKey ? '(set)' : '(not set)')}`);
+    console.log(`  OpenRouter Mod:  ${chalk.cyan(sanitizeForTerminal(current.openrouterModel || '(not set)'))}`);
+    console.log(`  OpenRouter Key:  ${chalk.cyan(current.openrouterApiKey ? '(set)' : '(not set)')}`);
+    console.log(`  Default Tags:    ${chalk.cyan(sanitizeForTerminal(current.defaultTags.join(', ') || '(none)'))}`);
+    console.log(`  Auto-analyze:    ${chalk.cyan(current.autoAnalyze ? 'Yes' : 'No')}`);
     console.log('');
     return;
+  }
+
+  if (options.provider || options.model || options.key) {
+    try {
+      const newConfig: Partial<Config> = {};
+      if (options.provider) {
+        if (['ollama', 'gemini', 'openrouter'].includes(options.provider)) {
+          newConfig.provider = options.provider as any;
+        } else {
+          throw new Error('Invalid provider. Use "ollama", "gemini", or "openrouter".');
+        }
+      }
+
+      const activeProvider = (options.provider || current.provider) as LlmProvider;
+
+      if (options.model) {
+        if (!isValidModelName(options.model)) {
+          throw new Error('Invalid model name format.');
+        }
+        if (activeProvider === 'gemini') newConfig.geminiModel = options.model;
+        else if (activeProvider === 'openrouter') newConfig.openrouterModel = options.model;
+        else newConfig.ollamaModel = options.model;
+      }
+
+      if (options.key) {
+        if (activeProvider === 'gemini') newConfig.geminiApiKey = options.key;
+        else if (activeProvider === 'openrouter') newConfig.openrouterApiKey = options.key;
+        else throw new Error('API key is only used for "gemini" or "openrouter" providers.');
+      }
+
+      saveConfig(newConfig);
+      console.log(`\n${chalk.green('Saved!')} Configuration updated from flags.\n`);
+      return;
+    } catch (err: any) {
+      console.log(chalk.red(`\nError: ${err.message}\n`));
+      return;
+    }
   }
 
   const answers = await inquirer.prompt([
@@ -271,15 +366,21 @@ export async function configCommand(options: { show?: boolean }) {
       default: current.provider,
       choices: [
         { name: 'Ollama (local model on this machine)', value: 'ollama' },
-        { name: 'Gemini API (cloud model via API key)', value: 'gemini' }
+        { name: 'Gemini API (cloud model via API key)', value: 'gemini' },
+        { name: 'OpenRouter (unified API for multiple models)', value: 'openrouter' }
       ]
     }
   ]);
 
   try {
-    const newConfig = answers.provider === 'gemini'
-      ? await configureGemini(current)
-      : await configureOllama(current);
+    let newConfig: Partial<Config>;
+    if (answers.provider === 'gemini') {
+      newConfig = await configureGemini(current);
+    } else if (answers.provider === 'openrouter') {
+      newConfig = await configureOpenRouter(current);
+    } else {
+      newConfig = await configureOllama(current);
+    }
 
     saveConfig(newConfig);
     console.log(`\n${chalk.green('Saved!')} Local Configuration saved.\n`);

@@ -33,9 +33,14 @@ function requireAiProvider(action: (...args: any[]) => void) {
   return async (...args: any[]) => {
     if (!isAiConfigured()) {
       const provider = getProvider();
-      const setupHint = provider === 'gemini'
-        ? 'Run pv config to add your Gemini API key and model.'
-        : 'Run pv config to choose or download an Ollama model.';
+      let setupHint = '';
+      if (provider === 'gemini') {
+        setupHint = 'Run pv config to add your Gemini API key and model.';
+      } else if (provider === 'openrouter') {
+        setupHint = 'Run pv config to add your OpenRouter API key and model.';
+      } else {
+        setupHint = 'Run pv config to choose or download an Ollama model.';
+      }
 
       console.log(chalk.yellow('\nWarning: This feature requires an AI provider to be configured.'));
       console.log(`${chalk.cyan(setupHint)}\n`);
@@ -130,6 +135,9 @@ program
   .command('config')
   .description('Choose AI provider and configure model, API key, and preferences')
   .option('--show', 'Show current settings')
+  .option('--provider <provider>', 'Set AI provider (ollama, gemini, openrouter)')
+  .option('--model <model>', 'Set AI model name/ID')
+  .option('--key <key>', 'Set API key')
   .action(configCommand);
 
 program

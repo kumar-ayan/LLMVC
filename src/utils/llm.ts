@@ -62,6 +62,65 @@ async function callOllama(systemMessage: string, userMessage: string, jsonFormat
   }
 }
 
+async function callOpenRouter(systemMessage: string, userMessage: string, jsonFormat: boolean): Promise<string> {
+  const { openrouterApiKey, openrouterModel } = getConfig();
+  if (!openrouterApiKey) {
+    throw new Error('No OpenRouter API key configured. Run "pv config" and choose OpenRouter first.');
+  }
+  if (!openrouterModel) {
+    throw new Error('No OpenRouter model configured. Run "pv config" and choose OpenRouter first.');
+  }
+
+  const payload: any = {
+    model: openrouterModel,
+    messages: [
+      { role: 'system', content: systemMessage },
+      { role: 'user', content: userMessage }
+    ],
+    temperature: 0.7,
+    top_p: 0.9
+  };
+
+  if (jsonFormat) {
+    payload.response_format = { type: 'json_object' };
+  }
+
+  try {
+    const res = await axios.post(
+      'https://openrouter.ai/api/v1/chat/completions',
+      payload,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openrouterApiKey}`
+        }
+      }
+    );
+
+    const content = res.data?.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new Error('OpenRouter returned an empty response.');
+    }
+
+    return content;
+  } catch (err: any) {
+    const status = err.response?.status;
+    const apiMessage =
+      err.response?.data?.error?.message ||
+      err.response?.data?.message ||
+      err.message;
+
+    if (status === 400) {
+      throw new Error(`OpenRouter API rejected the request: ${apiMessage}`);
+    }
+    if (status === 401 || status === 403) {
+      throw new Error('OpenRouter API key was rejected. Update it with "pv config".');
+    }
+
+    throw new Error(`OpenRouter API error: ${apiMessage}`);
+  }
+}
+
 async function callGemini(systemMessage: string, userMessage: string, jsonFormat: boolean): Promise<string> {
   const { geminiApiKey, geminiModel } = getConfig();
   if (!geminiApiKey) {
@@ -128,6 +187,10 @@ export async function callLLM(
 
   if (provider === 'gemini') {
     return callGemini(systemMessage, userMessage, jsonFormat);
+  }
+
+  if (provider === 'openrouter') {
+    return callOpenRouter(systemMessage, userMessage, jsonFormat);
   }
 
   return callOllama(systemMessage, userMessage, jsonFormat);

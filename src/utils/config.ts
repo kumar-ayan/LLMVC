@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-export type LlmProvider = 'ollama' | 'gemini';
+export type LlmProvider = 'ollama' | 'gemini' | 'openrouter';
 
 export interface Config {
   provider: LlmProvider;
@@ -12,6 +12,8 @@ export interface Config {
   geminiApiKey: string;
   defaultTags: string[];
   autoAnalyze: boolean;
+  openrouterApiKey: string;
+  openrouterModel: string;
 }
 
 const VAULT_DIR = path.join(os.homedir(), '.promptvault');
@@ -19,14 +21,18 @@ const CONFIG_PATH = path.join(VAULT_DIR, 'config.json');
 const DIRECTORY_MODE = 0o700;
 const FILE_MODE = 0o600;
 
+
+
 const DEFAULT_CONFIG: Config = {
   provider: 'ollama',
   ollamaModel: '',
   ollamaUrl: 'http://localhost:11434',
-  geminiModel: 'gemini-2.5-flash',
+  geminiModel: 'gemma-3.5',
   geminiApiKey: '',
   defaultTags: [],
   autoAnalyze: false,
+  openrouterApiKey: '',
+  openrouterModel: '',
 };
 
 function tightenPermissions(targetPath: string, mode: number): void {
@@ -102,8 +108,14 @@ export function getConfig(): Config {
       delete parsed.model;
     }
 
-    if (parsed.provider !== 'ollama' && parsed.provider !== 'gemini') {
-      parsed.provider = parsed.geminiApiKey ? 'gemini' : 'ollama';
+    if (parsed.provider !== 'ollama' && parsed.provider !== 'gemini' && parsed.provider !== 'openrouter') {
+      if (parsed.openrouterApiKey) {
+        parsed.provider = 'openrouter';
+      } else if (parsed.geminiApiKey) {
+        parsed.provider = 'gemini';
+      } else {
+        parsed.provider = 'ollama';
+      }
     }
 
     const merged = { ...DEFAULT_CONFIG, ...parsed };
@@ -146,6 +158,10 @@ export function isAiConfigured(): boolean {
   const config = getConfig();
   if (config.provider === 'gemini') {
     return Boolean(config.geminiApiKey && config.geminiModel);
+  }
+
+  if (config.provider === 'openrouter') {
+    return Boolean(config.openrouterApiKey && config.openrouterModel);
   }
 
   return Boolean(config.ollamaModel);
