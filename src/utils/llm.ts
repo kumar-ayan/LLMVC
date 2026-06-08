@@ -136,15 +136,73 @@ export async function callLLM(
   return callOllama(systemMessage, userMessage, jsonFormat);
 }
 
+/**
+ * Attempt to extract the first complete JSON object from a string that may
+ * contain extra text before/after the JSON (e.g. chain-of-thought reasoning
+ * from models like gemma that ignore responseMimeType).
+ */
+function extractJsonFromText(text: string): string | null {
+  // Strategy 1: look for ```json ... ``` fenced blocks
+  const fencedMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fencedMatch) {
+    return fencedMatch[1].trim();
+  }
+
+  // Strategy 2: find the first top-level { ... } by brace-matching
+  const start = text.indexOf('{');
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+
+    if (escape) {
+      escape = false;
+      continue;
+    }
+
+    if (ch === '\\' && inString) {
+      escape = true;
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) continue;
+
+    if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) {
+        return text.substring(start, i + 1);
+      }
+    }
+  }
+
+  return null;
+}
+
 export async function callLLMJson<T>(systemMessage: string, userMessage: string): Promise<T> {
   const content = await callLLM(systemMessage, userMessage, true);
 
+  // 1) Try parsing the raw response directly
   try {
     return JSON.parse(content) as T;
   } catch {
-    const match = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (match) {
-      return JSON.parse(match[1]) as T;
+    // 2) Try extracting JSON from mixed text/JSON response
+    const extracted = extractJsonFromText(content);
+    if (extracted) {
+      try {
+        return JSON.parse(extracted) as T;
+      } catch {
+        // Fall through to error
+      }
     }
 
     throw new Error(`Failed to parse JSON from model response:\n${content}`);
